@@ -1,9 +1,11 @@
+import json
+
 import psycopg2
 from flask import Flask, jsonify
 from flask_restful import Resource, Api
 
-from home_assingment.my_api.connectNessus import LoadFromVulners
-from home_assingment.my_api.DbCommunication import PopulateIntoDb
+from api.DbCommunication import PopulateIntoDb
+from api.connectNessus import LoadFromVulners
 
 db_connect = psycopg2.connect(user="postgres",
                               password="Aa123456",
@@ -20,7 +22,7 @@ class AllPlugins(Resource):
             conn = db_connect  # connect to database
             cursor = conn.cursor()
             cursor.execute("select * from plugins order by {0};".format(parameter))
-            return {'plugin': ['{0}'.format((i,)) for i in cursor.fetchall()]}
+            return jsonify({'plugin': ['{0}'.format((i,)) for i in cursor.fetchall()]})
         else:
             return "Cannot evaluate param: " + str(parameter)
 
@@ -49,13 +51,21 @@ class SpecificPlugin(Resource):
         return jsonify(result)
 
 
-populator = PopulateIntoDb()
-vulner_loader = LoadFromVulners()
-populator.populate(vulner_loader.load())
+def initialize_db():
+    populator = PopulateIntoDb()
+    if not populator.get_is_populated():
+        vulner_loader = LoadFromVulners()
+        populator.populate(vulner_loader.load())
 
-api.add_resource(AllPlugins, '/plugins/<parameter>')  # Route_1
-api.add_resource(PluginByCve, '/plugin_by_cve/<parameters>')  # Route_2
-api.add_resource(SpecificPlugin, '/get_plugin/<pluginid>')  # Route_3
+
+def add_api_routes():
+    api.add_resource(AllPlugins, '/plugins/<parameter>')
+    api.add_resource(PluginByCve, '/plugin_by_cve/<parameters>')
+    api.add_resource(SpecificPlugin, '/get_plugin/<pluginid>')
+
+
+initialize_db()
+add_api_routes()
 
 if __name__ == '__main__':
     app.run(port='5002')

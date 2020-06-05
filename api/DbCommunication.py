@@ -3,6 +3,7 @@ import psycopg2
 
 
 class PopulateIntoDb:
+    isPopulated = False
 
     def __init__(self):
         self.connection = psycopg2.connect(user="postgres",
@@ -11,8 +12,10 @@ class PopulateIntoDb:
                                            port="5432",
                                            database="vulcandb")
         self.cursor = self.connection.cursor()
-        self.cursor.execute('create table if not exists plugins(' /
+        self.cursor.execute('create table if not exists plugins(' +
                             'pluginID varchar(30) primary key, published text, title text, score text, cvelist text);')
+        self.cursor.execute('select count (*) from plugins;')
+        self.isPopulated = self.cursor.fetchone()[0] > 0
 
     def insert_new_plugin(self, entry):
         insert_query = "INSERT INTO plugins(pluginID, published, title, score, cvelist) VALUES(%s,%s,%s,%s,%s)"
@@ -37,3 +40,6 @@ class PopulateIntoDb:
 
         self.cursor.close()
         self.connection.close()
+
+    def get_is_populated(self):
+        return self.isPopulated
